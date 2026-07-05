@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WA Voice Reader"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Автоматическая расшифровка голосовых WhatsApp"
+            android:textSize="13sp"
+            android:layout_marginBottom="20dp" />
+
+        <TextView
+            android:id="@+id/textStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#11000000"
+            android:padding="12dp"
+            android:layout_marginBottom="20dp"
+            android:text="Статус загружается…" />
+
+        <Button
+            android:id="@+id/btnAllFilesAccess"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="1. Разрешить доступ ко всем файлам" />
+
+        <Button
+            android:id="@+id/btnOverlayPermission"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="2. Разрешить показ поверх экрана" />
+
+        <Button
+            android:id="@+id/btnNotifPermission"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="3. Разрешить уведомления" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="4. OpenAI API-ключ:" />
+
+        <EditText
+            android:id="@+id/editApiKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="sk-..."
+            android:inputType="textPassword" />
+
+        <Button
+            android:id="@+id/btnSaveKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Сохранить ключ" />
+
+        <Button
+            android:id="@+id/btnStart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:backgroundTint="#25D366"
+            android:text="▶ Запустить слежение" />
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="■ Остановить" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="Тест без WhatsApp:"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:textSize="12sp"
+            android:text="Запишет 3 секунды с микрофона и положит файл в ту же папку, которую слушает сервис — будто пришло настоящее голосовое. Сначала запустите слежение выше." />
+
+        <Button
+            android:id="@+id/btnTestRecord"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#128C7E"
+            android:text="🎤 Тестовое голосовое (эмуляция WhatsApp)" />
+
+    </LinearLayout>
+</ScrollView>
