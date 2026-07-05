@@ -1,9 +1,12 @@
-name: Build APK
+name: Build and Release APK
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "main" ]
   workflow_dispatch: {}
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -15,18 +18,36 @@ jobs:
       - name: Установить Java 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Установить Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Собрать APK (debug)
-        working-directory: WAVoiceReader
-        run: gradle assembleDebug --stacktrace
+      - name: Восстановить release keystore
+        run: |
+          mkdir -p "$RUNNER_TEMP/keystore"
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/keystore/release.keystore"
 
-      - name: Загрузить готовый APK как артефакт
-        uses: actions/upload-artifact@v4
+      - name: Собрать подписанный release APK
+        working-directory: WAVoiceReader
+        env:
+          RELEASE_KEYSTORE_PATH: ${{ runner.temp }}/keystore/release.keystore
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          gradle assembleRelease --stacktrace \
+            -PappVersionCode=${{ github.run_number }} \
+            -PappVersionName=1.0.${{ github.run_number }}
+
+      - name: Удалить keystore с раннера
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keystore"
+
+      - name: Опубликовать в GitHub Releases
+        uses: softprops/action-gh-release@v2
         with:
-          name: WAVoiceReader-apk
-          path: WAVoiceReader/app/build/outputs/apk/debug/app-debug.apk
+          tag_name: v1.0.${{ github.run_number }}
+          name: WAVoiceReader v1.0.${{ github.run_number }}
+          files: WAVoiceReader/app/build/outputs/apk/release/app-release.apk
