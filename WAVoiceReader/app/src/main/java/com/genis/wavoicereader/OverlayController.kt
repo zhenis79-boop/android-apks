@@ -1,5 +1,7 @@
 package com.genis.wavoicereader
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -12,28 +14,49 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 
 /**
  * Показывает плавающие карточки с текстом поверх других приложений.
  * Требует разрешение "Отображение поверх других приложений" (SYSTEM_ALERT_WINDOW).
+ *
+ * Поведение карточки:
+ *  - крестик ✕ в углу закрывает её сразу;
+ *  - тап по тексту копирует его в буфер обмена;
+ *  - если ничего не нажали, карточка сама исчезает через autoHideMs (по умолчанию 1 минута).
  */
 class OverlayController(private val context: Context) {
+
+    companion object {
+        private const val TAG = "OverlayController"
+        const val DEFAULT_AUTO_HIDE_MS = 60_000L
+    }
 
     private val windowManager =
         context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var container: LinearLayout? = null
+    private val hideRunnables = HashMap<View, Runnable>()
 
     fun hasPermission(): Boolean = Settings.canDrawOverlays(context)
 
-    fun showMessage(title: String, text: String, autoHideMs: Long = 25_000L) {
-        if (!hasPermission()) return
+    fun showMessage(title: String, text: String, autoHideMs: Long = DEFAULT_AUTO_HIDE_MS) {
+        if (!hasPermission()) {
+            Logger.e(TAG, "Нет разрешения на показ поверх экрана — карточка не показана")
+            return
+        }
         mainHandler.post {
             ensureContainer()
             val card = buildCard(title, text)
             container?.addView(card, 0)
-            mainHandler.postDelayed({ removeCard(card) }, autoHideMs)
+            Logger.i(TAG, "Показана карточка: \"$title\" (скрытие через ${autoHideMs / 1000}с)")
+            val hideRunnable = Runnable {
+                removeCard(card)
+                Logger.i(TAG, "Карточка авто-скрыта по таймеру")
+            }
+            hideRunnables[card] = hideRunnable
+            mainHandler.postDelayed(hideRunnable, autoHideMs)
         }
     }
 
@@ -66,18 +89,17 @@ class OverlayController(private val context: Context) {
     }
 
     private fun buildCard(title: String, text: String): View {
-        val padding = (16 * context.resources.displayMetrics.density).toInt()
-        val margin = (12 * context.resources.displayMetrics.density).toInt()
+        val density = context.resources.displayMetrics.density
+        val padding = (16 * density).toInt()
+        val margin = (12 * density).toInt()
 
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#DD202124"))
+                setColor(Color.parseColor("#EE202124"))
                 cornerRadius = 24f
             }
-            isClickable = true
-            setOnClickListener { removeCard(this) }
         }
         val lp = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -86,33 +108,71 @@ class OverlayController(private val context: Context) {
         lp.setMargins(margin, margin, margin, 0)
         card.layoutParams = lp
 
+        // Верхняя строка: заголовок + крестик
+        val header = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
         val titleView = TextView(context).apply {
             setText(title)
             setTextColor(Color.parseColor("#25D366")) // цвет WhatsApp
             textSize = 13f
-            setPadding(0, 0, 0, 6)
+            layoutParams = LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+            )
         }
+        val closeBtn = TextView(context).apply {
+            setText("✕")
+            setTextColor(Color.WHITE)
+            textSize = 20f
+            val p = (8 * density).toInt()
+            setPadding(p, 0, p, 0)
+            isClickable = true
+            setOnClickListener {
+                removeCard(card)
+                Logger.i(TAG, "Карточка закрыта крестиком")
+            }
+        }
+        header.addView(titleView)
+        header.addView(closeBtn)
+
         val textView = TextView(context).apply {
             setText(text)
             setTextColor(Color.WHITE)
             textSize = 16f
-        }
-        val hint = TextView(context).apply {
-            setText("нажмите, чтобы закрыть")
-            setTextColor(Color.parseColor("#99FFFFFF"))
-            textSize = 11f
-            setPadding(0, 8, 0, 0)
+            setPadding(0, (6 * density).toInt(), 0, 0)
+            isClickable = true
+            setOnClickListener { copyToClipboard(text) }
         }
 
-        card.addView(titleView)
+        card.addView(header)
         card.addView(textView)
-        card.addView(hint)
         return card
     }
 
+    private fun copyToClipboard(text: String) {
+        try {
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("Голосовое", text))
+            Toast.makeText(context, "Текст скопирован", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Logger.e(TAG, "Не удалось скопировать текст", e)
+        }
+    }
+
     private fun removeCard(view: View) {
-        container?.let {
-            if (view.parent == it) it.removeView(view)
+        mainHandler.post {
+            val c = container ?: return@post
+            hideRunnables.remove(view)?.let { mainHandler.removeCallbacks(it) }
+            if (view.parent == c) c.removeView(view)
+            // если карточек не осталось — убираем контейнер из окна, чтобы он не висел вечно
+            if (c.childCount == 0) {
+                try {
+                    windowManager.removeView(c)
+                } catch (_: Exception) {
+                }
+                container = null
+            }
         }
     }
 }

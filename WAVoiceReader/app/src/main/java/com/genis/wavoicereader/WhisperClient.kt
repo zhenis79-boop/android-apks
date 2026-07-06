@@ -26,9 +26,9 @@ object WhisperClient {
      * @param audioFile файл голосового сообщения (переименованный в .ogg, т.к. WhatsApp
      *                  использует Ogg/Opus контейнер, который Whisper понимает под расширением ogg)
      * @param apiKey    ключ OpenAI (Bearer)
-     * @param language  необязательная подсказка языка, например "ru"
+     * @param language  необязательная подсказка языка. По умолчанию null — Whisper определяет язык сам.
      */
-    fun transcribe(audioFile: File, apiKey: String, language: String? = "ru"): Result<String> {
+    fun transcribe(audioFile: File, apiKey: String, language: String? = null): Result<String> {
         return try {
             val mediaType = "audio/ogg".toMediaTypeOrNull()
             val bodyBuilder = MultipartBody.Builder()
@@ -51,6 +51,7 @@ object WhisperClient {
 
             client.newCall(request).execute().use { response ->
                 val bodyStr = response.body?.string().orEmpty()
+                Logger.i("WhisperClient", "HTTP ${response.code}")
                 if (!response.isSuccessful) {
                     return Result.failure(IOException("HTTP ${response.code}: $bodyStr"))
                 }

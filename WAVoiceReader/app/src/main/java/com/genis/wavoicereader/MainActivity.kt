@@ -1,5 +1,8 @@
 package com.genis.wavoicereader
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.media.MediaRecorder
 import android.net.Uri
@@ -25,6 +28,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Logger.init(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -46,6 +50,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnStart.setOnClickListener {
             Prefs.setServiceEnabled(this, true)
+            Logger.i("MainActivity", "Пользователь нажал 'Запустить слежение'")
             val intent = Intent(this, VoiceWatcherService::class.java)
             ContextCompat.startForegroundService(this, intent)
             Toast.makeText(this, "Сервис запущен", Toast.LENGTH_SHORT).show()
@@ -53,13 +58,47 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnStop.setOnClickListener {
             Prefs.setServiceEnabled(this, false)
+            Logger.i("MainActivity", "Пользователь нажал 'Остановить'")
             stopService(Intent(this, VoiceWatcherService::class.java))
             Toast.makeText(this, "Сервис остановлен", Toast.LENGTH_SHORT).show()
         }
 
         binding.btnTestRecord.setOnClickListener { onTestButtonClicked() }
 
+        binding.btnCopyHistory.setOnClickListener {
+            copyToClipboard("История WA Voice Reader", HistoryStore.formatted(this))
+        }
+        binding.btnClearHistory.setOnClickListener {
+            HistoryStore.clear(this)
+            refreshHistory()
+            Toast.makeText(this, "История очищена", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.btnCopyLogs.setOnClickListener {
+            copyToClipboard("Логи WA Voice Reader", Logger.read())
+        }
+        binding.btnRefreshLogs.setOnClickListener { refreshLogs() }
+        binding.btnClearLogs.setOnClickListener {
+            Logger.clear(this)
+            refreshLogs()
+            Toast.makeText(this, "Логи очищены", Toast.LENGTH_SHORT).show()
+        }
+
         updateStatusText()
+    }
+
+    private fun copyToClipboard(label: String, text: String) {
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText(label, text))
+        Toast.makeText(this, "Скопировано в буфер обмена", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun refreshHistory() {
+        binding.textHistory.text = HistoryStore.formatted(this)
+    }
+
+    private fun refreshLogs() {
+        binding.textLogs.text = Logger.read()
     }
 
     private fun onTestButtonClicked() {
@@ -129,6 +168,7 @@ class MainActivity : AppCompatActivity() {
         testRecorder = null
 
         val dir = testFile?.parentFile
+        Logger.i("MainActivity", "Тестовый файл записан: ${testFile?.absolutePath}")
         Toast.makeText(
             this,
             "Готово! Файл ${testFile?.name} создан в папке ${dir?.name}.\n" +
@@ -150,6 +190,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateStatusText()
+        refreshHistory()
+        refreshLogs()
     }
 
     private fun requestAllFilesAccess() {
