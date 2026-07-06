@@ -45,9 +45,15 @@ jobs:
         if: always()
         run: rm -rf "$RUNNER_TEMP/keystore"
 
+      - name: Переименовать APK с версией
+        working-directory: WAVoiceReader
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk \
+             app/build/outputs/apk/release/WAVoiceReader-v1.0.${{ github.run_number }}.apk
+
       - name: Опубликовать в GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: WAVoiceReader v1.0.${{ github.run_number }}
-          files: WAVoiceReader/app/build/outputs/apk/release/app-release.apk
+          files: WAVoiceReader/app/build/outputs/apk/release/WAVoiceReader-v1.0.${{ github.run_number }}.apk
