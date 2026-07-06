@@ -238,7 +238,6 @@ class VoiceWatcherService : Service() {
             return
         }
 
-        overlay.showMessage(title, "Распознаю…", autoHideMs = 8000)
         Logger.i(TAG, "Отправляю на распознавание [$title]: ${tmp.name} (${tmp.length()} байт)")
 
         val result = WhisperClient.transcribe(tmp, apiKey)
