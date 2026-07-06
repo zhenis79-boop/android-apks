@@ -53,6 +53,13 @@
             android:layout_marginTop="8dp"
             android:text="3. Разрешить уведомления" />
 
+        <Button
+            android:id="@+id/btnNotifAccess"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Доступ к уведомлениям (кто прислал голосовое)" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

@@ -47,6 +47,17 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- Чтение уведомлений WhatsApp, чтобы определить отправителя входящего голосового -->
+        <service
+            android:name=".WaNotificationListener"
+            android:exported="true"
+            android:label="WA Voice Reader — доступ к уведомлениям"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".BootReceiver"
             android:exported="false">

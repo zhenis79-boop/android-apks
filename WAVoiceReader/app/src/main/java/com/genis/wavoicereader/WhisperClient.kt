@@ -11,10 +11,13 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
- * Отправляет аудиофайл в OpenAI Whisper API (endpoint /v1/audio/transcriptions)
- * и возвращает распознанный текст.
+ * Отправляет аудиофайл в OpenAI (endpoint /v1/audio/transcriptions) и возвращает текст.
+ * Модель gpt-4o-mini-transcribe — быстрее и дешевле whisper-1 при сопоставимом качестве.
  */
 object WhisperClient {
+
+    private const val MODEL = "gpt-4o-mini-transcribe"
+
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -33,7 +36,7 @@ object WhisperClient {
             val mediaType = "audio/ogg".toMediaTypeOrNull()
             val bodyBuilder = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("model", "whisper-1")
+                .addFormDataPart("model", MODEL)
                 .addFormDataPart(
                     "file",
                     audioFile.name,

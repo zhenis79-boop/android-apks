@@ -21,8 +21,8 @@ class VoiceWatcherService : Service() {
         private const val TAG = "VoiceWatcher"
         private const val CHANNEL_ID = "wa_voice_watcher"
         private const val NOTIF_ID = 1
-        private const val POLL_INTERVAL_MS = 6_000L
-        private const val STABLE_CHECK_DELAY_MS = 1200L
+        private const val POLL_INTERVAL_MS = 3_000L
+        private const val STABLE_CHECK_DELAY_MS = 900L
 
         // Возможные пути к папке голосовых сообщений WhatsApp на разных версиях Android/WA.
         // Голосовые внутри раскладываются по подпапкам-месяцам (напр. .../WhatsApp Voice Notes/202607/),
@@ -205,6 +205,23 @@ class VoiceWatcherService : Service() {
             return
         }
 
+        // Определяем отправителя и отсеиваем ВАШИ исходящие голосовые.
+        val isTest = file.absolutePath.startsWith(TEST_DIR)
+        val title: String
+        if (isTest) {
+            title = "Тест (эмуляция)"
+        } else if (NotificationAccess.isEnabled(this)) {
+            val rec = SenderTracker.matchIncomingVoice(file.lastModified())
+            if (rec == null) {
+                Logger.i(TAG, "Пропущено: нет входящего голосового уведомления WhatsApp — похоже на ваше исходящее (${file.name})")
+                return
+            }
+            title = "Голосовое от ${rec.title}"
+        } else {
+            title = "Голосовое сообщение"
+            Logger.i(TAG, "Доступ к уведомлениям выключен — не могу определить отправителя и отсеять исходящие. Включите его в приложении.")
+        }
+
         val apiKey = Prefs.getApiKey(this)
         if (apiKey.isNullOrBlank()) {
             Logger.e(TAG, "Не задан API-ключ OpenAI — распознавание невозможно")
@@ -221,17 +238,17 @@ class VoiceWatcherService : Service() {
             return
         }
 
-        overlay.showMessage("WA Voice Reader", "Распознаю новое голосовое…", autoHideMs = 8000)
-        Logger.i(TAG, "Отправляю в Whisper: ${tmp.name} (${tmp.length()} байт)")
+        overlay.showMessage(title, "Распознаю…", autoHideMs = 8000)
+        Logger.i(TAG, "Отправляю на распознавание [$title]: ${tmp.name} (${tmp.length()} байт)")
 
         val result = WhisperClient.transcribe(tmp, apiKey)
         tmp.delete()
 
         result.onSuccess { text ->
             val shown = if (text.isBlank()) "(пустая расшифровка)" else text
-            Logger.i(TAG, "Распознано: $shown")
-            HistoryStore.add(this, shown)
-            overlay.showMessage("Голосовое сообщение", shown)
+            Logger.i(TAG, "Распознано [$title]: $shown")
+            HistoryStore.add(this, "$title: $shown")
+            overlay.showMessage(title, shown)
             updateNotification("Последнее сообщение распознано")
         }.onFailure { err ->
             Logger.e(TAG, "Ошибка транскрибации", err)

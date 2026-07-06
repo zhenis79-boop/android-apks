@@ -82,7 +82,8 @@ class OverlayController(private val context: Context) {
             android.graphics.PixelFormat.TRANSLUCENT
         )
         params.gravity = Gravity.TOP
-        params.y = 60
+        // Смещаем ниже, чтобы карточку не перекрывала шторка уведомления WhatsApp сверху.
+        params.y = (150 * context.resources.displayMetrics.density).toInt()
 
         windowManager.addView(layout, params)
         container = layout

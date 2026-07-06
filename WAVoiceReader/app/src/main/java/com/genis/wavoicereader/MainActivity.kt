@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnAllFilesAccess.setOnClickListener { requestAllFilesAccess() }
         binding.btnOverlayPermission.setOnClickListener { requestOverlayPermission() }
         binding.btnNotifPermission.setOnClickListener { requestNotificationPermission() }
+        binding.btnNotifAccess.setOnClickListener { requestNotificationAccess() }
 
         binding.btnStart.setOnClickListener {
             Prefs.setServiceEnabled(this, true)
@@ -224,6 +225,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun requestNotificationAccess() {
+        if (NotificationAccess.isEnabled(this)) {
+            Toast.makeText(this, "Доступ к уведомлениям уже выдан", Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            Toast.makeText(this, "Найдите «WA Voice Reader» в списке и включите доступ", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Не удалось открыть настройки доступа к уведомлениям", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -243,11 +257,13 @@ class MainActivity : AppCompatActivity() {
         val allFiles = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
             android.os.Environment.isExternalStorageManager() else true
         val overlay = Settings.canDrawOverlays(this)
+        val notifAccess = NotificationAccess.isEnabled(this)
         val key = !Prefs.getApiKey(this).isNullOrBlank()
 
         binding.textStatus.text = buildString {
             append("Доступ ко всем файлам: ${if (allFiles) "✅" else "❌"}\n")
             append("Показ поверх экрана: ${if (overlay) "✅" else "❌"}\n")
+            append("Доступ к уведомлениям (кто прислал): ${if (notifAccess) "✅" else "❌"}\n")
             append("API-ключ сохранён: ${if (key) "✅" else "❌"}")
         }
     }
