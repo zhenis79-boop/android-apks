@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
         }
         binding.btnRefreshLogs.setOnClickListener { refreshLogs() }
         binding.btnClearLogs.setOnClickListener {
-            Logger.clear(this)
+            Logger.clear()
             refreshLogs()
             Toast.makeText(this, "Логи очищены", Toast.LENGTH_SHORT).show()
         }
