@@ -13,6 +13,9 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import java.util.concurrent.Executors
 
 class VoiceWatcherService : Service() {
@@ -21,15 +24,17 @@ class VoiceWatcherService : Service() {
         private const val TAG = "VoiceWatcher"
         private const val CHANNEL_ID = "wa_voice_watcher"
         private const val NOTIF_ID = 1
-        private const val POLL_INTERVAL_MS = 3_000L
+        // Опрос — только подстраховка на случай пропуска системного события, поэтому редкий.
+        private const val POLL_INTERVAL_MS = 20_000L
         private const val STABLE_CHECK_DELAY_MS = 900L
         // Файл иногда обгоняет уведомление WhatsApp на пару секунд — даём время подождать.
         private const val SENDER_MATCH_RETRY_MS = 700L
         private const val SENDER_MATCH_MAX_WAIT_MS = 6_000L
 
         // Возможные пути к папке голосовых сообщений WhatsApp на разных версиях Android/WA.
-        // Голосовые внутри раскладываются по подпапкам-месяцам (напр. .../WhatsApp Voice Notes/202607/),
-        // поэтому слежение ведётся рекурсивно.
+        // Голосовые внутри раскладываются по подпапкам-месяцам (напр. .../WhatsApp Voice Notes/202607/) —
+        // слушаем саму папку (чтобы поймать появление новой месячной подпапки) и её содержимое
+        // за последние 2 месяца, см. recentMonthNames().
         val CANDIDATE_DIRS = listOf(
             "/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Voice Notes",
             "/storage/emulated/0/WhatsApp/Media/WhatsApp Voice Notes",
@@ -40,10 +45,13 @@ class VoiceWatcherService : Service() {
         val TEST_DIR = "/storage/emulated/0/WAVoiceReaderTest/VoiceNotes"
     }
 
-    private val executor = Executors.newCachedThreadPool()
+    // Файлы обрабатываются по одному — параллелизм тут не нужен, а один поток экономит память.
+    private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val fileObservers = mutableListOf<FileObserver>()
     private val watchedDirPaths = mutableSetOf<String>()
+    // Для опроса-подстраховки: не пересканировать папку, если её mtime не менялся с прошлого раза.
+    private val dirLastModified = mutableMapOf<String, Long>()
     private var pollRunnable: Runnable? = null
     private lateinit var overlay: OverlayController
 
@@ -72,6 +80,16 @@ class VoiceWatcherService : Service() {
         executor.shutdownNow()
     }
 
+    /** Имена подпапок-месяцев (формат YYYYMM), которые имеет смысл слушать — текущий и предыдущий. */
+    private fun recentMonthNames(): Set<String> {
+        val fmt = SimpleDateFormat("yyyyMM", Locale.US)
+        val cal = Calendar.getInstance()
+        val cur = fmt.format(cal.time)
+        cal.add(Calendar.MONTH, -1)
+        val prev = fmt.format(cal.time)
+        return setOf(cur, prev)
+    }
+
     private fun setupWatcher() {
         // 1. Реальные папки WhatsApp — берём все, что реально существуют на телефоне.
         val realDirs = CANDIDATE_DIRS.map { File(it) }.filter { it.exists() && it.isDirectory }
@@ -89,12 +107,20 @@ class VoiceWatcherService : Service() {
             Logger.i(TAG, "Найдены папки WhatsApp: ${realDirs.joinToString(" | ") { it.absolutePath }}")
         }
 
-        // Рекурсивно вешаем наблюдатели на каждую папку и её подпапки.
+        // Новые голосовые всегда попадают в папку текущего месяца, поэтому вглубь смотрим только
+        // на неё и на прошлый месяц (на случай, если сообщение пришло прямо на границе месяцев) —
+        // остальные десятки старых папок с историей нам не нужны и только тратят ресурсы.
+        val recentMonths = recentMonthNames()
         for (root in rootDirs) {
-            root.walkTopDown().filter { it.isDirectory }.forEach { dir ->
-                attachObserver(dir)
-                // помечаем уже существующие файлы как известные, чтобы не распознавать старьё
-                dir.listFiles()?.forEach { f -> if (f.isFile) knownFiles.add(f.absolutePath) }
+            attachObserver(root) // сама корневая папка — чтобы поймать CREATE новой месячной подпапки
+            root.listFiles()?.forEach { entry ->
+                when {
+                    entry.isFile -> knownFiles.add(entry.absolutePath)
+                    entry.isDirectory && (root == testDir || entry.name in recentMonths) -> {
+                        attachObserver(entry)
+                        entry.listFiles()?.forEach { f -> if (f.isFile) knownFiles.add(f.absolutePath) }
+                    }
+                }
             }
         }
         Logger.i(TAG, "Слежу за ${watchedDirPaths.size} папками, известных файлов: ${knownFiles.size}")
@@ -139,17 +165,21 @@ class VoiceWatcherService : Service() {
         handleCandidate(child)
     }
 
-    /** Резервный опрос всех наблюдаемых папок рекурсивно на случай пропуска события. */
+    /**
+     * Резервный опрос на случай пропуска системного события. Дешёвый: полностью пересканирует
+     * содержимое папки, только если её mtime изменился с прошлой проверки (появился/пропал файл) —
+     * иначе для неё делается один быстрый stat() вместо чтения списка файлов.
+     */
     private fun startPolling() {
         pollRunnable = object : Runnable {
             override fun run() {
-                for (root in rootDirs) {
-                    root.walkTopDown().forEach { f ->
-                        if (f.isDirectory) {
-                            attachObserver(f)
-                        } else {
-                            handleCandidate(f)
-                        }
+                for (path in watchedDirPaths.toList()) {
+                    val dir = File(path)
+                    val mtime = dir.lastModified()
+                    if (dirLastModified[path] == mtime) continue
+                    dirLastModified[path] = mtime
+                    dir.listFiles()?.forEach { f ->
+                        if (f.isDirectory) attachObserver(f) else handleCandidate(f)
                     }
                 }
                 mainHandler.postDelayed(this, POLL_INTERVAL_MS)
