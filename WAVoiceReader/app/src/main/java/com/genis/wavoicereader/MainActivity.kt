@@ -223,13 +223,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestNotificationAccess() {
-        if (NotificationAccess.isEnabled(this)) {
-            Toast.makeText(this, "Доступ к уведомлениям уже выдан", Toast.LENGTH_SHORT).show()
-            return
-        }
+        // Всегда открываем экран настроек, даже если разрешение уже отмечено выданным:
+        // если приложение не получает реальные уведомления, нужно выключить и включить
+        // тумблер заново — а для этого нужно попасть на этот экран, а не увидеть тост.
         try {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-            Toast.makeText(this, "Найдите «WA Voice Reader» в списке и включите доступ", Toast.LENGTH_LONG).show()
+            val hint = if (NotificationAccess.isEnabled(this))
+                "Найдите «WA Voice Reader» — выключите тумблер и сразу включите обратно (это чинит зависший доступ)"
+            else
+                "Найдите «WA Voice Reader» в списке и включите доступ"
+            Toast.makeText(this, hint, Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "Не удалось открыть настройки доступа к уведомлениям", Toast.LENGTH_LONG).show()
         }
