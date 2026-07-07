@@ -23,6 +23,9 @@ class VoiceWatcherService : Service() {
         private const val NOTIF_ID = 1
         private const val POLL_INTERVAL_MS = 3_000L
         private const val STABLE_CHECK_DELAY_MS = 900L
+        // Файл иногда обгоняет уведомление WhatsApp на пару секунд — даём время подождать.
+        private const val SENDER_MATCH_RETRY_MS = 700L
+        private const val SENDER_MATCH_MAX_WAIT_MS = 6_000L
 
         // Возможные пути к папке голосовых сообщений WhatsApp на разных версиях Android/WA.
         // Голосовые внутри раскладываются по подпапкам-месяцам (напр. .../WhatsApp Voice Notes/202607/),
@@ -203,7 +206,18 @@ class VoiceWatcherService : Service() {
             )
             return
         } else {
-            val rec = SenderTracker.matchIncomingVoice(file.lastModified())
+            // Файл иногда появляется чуть РАНЬШЕ уведомления WhatsApp (доли секунды —
+            // единицы секунд), поэтому пробуем сопоставить несколько раз с паузами,
+            // а не один раз сразу — иначе ловим гонку и теряем настоящие входящие.
+            var rec: SenderTracker.Rec? = null
+            var waitedMs = 0L
+            while (rec == null && waitedMs <= SENDER_MATCH_MAX_WAIT_MS) {
+                rec = SenderTracker.matchIncomingVoice(file.lastModified())
+                if (rec == null) {
+                    Thread.sleep(SENDER_MATCH_RETRY_MS)
+                    waitedMs += SENDER_MATCH_RETRY_MS
+                }
+            }
             if (rec == null) {
                 Logger.i(TAG, "Нет совпадения с уведомлением для ${file.name} (время файла ${file.lastModified()}) — пропускаю")
                 return
