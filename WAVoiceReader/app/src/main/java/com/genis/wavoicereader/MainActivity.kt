@@ -256,11 +256,20 @@ class MainActivity : AppCompatActivity() {
         val overlay = Settings.canDrawOverlays(this)
         val notifAccess = NotificationAccess.isEnabled(this)
         val key = !Prefs.getApiKey(this).isNullOrBlank()
+        val connectedAt = Prefs.getNotifListenerConnectedAt(this)
 
         binding.textStatus.text = buildString {
             append("Доступ ко всем файлам: ${if (allFiles) "✅" else "❌"}\n")
             append("Показ поверх экрана: ${if (overlay) "✅" else "❌"}\n")
-            append("Доступ к уведомлениям (кто прислал): ${if (notifAccess) "✅" else "❌"}\n")
+            append("Доступ к уведомлениям (разрешение): ${if (notifAccess) "✅" else "❌"}\n")
+            if (notifAccess) {
+                if (connectedAt > 0) {
+                    val ago = (System.currentTimeMillis() - connectedAt) / 1000
+                    append("Слушатель уведомлений реально подключался: ✅ (${ago}с назад)\n")
+                } else {
+                    append("Слушатель уведомлений реально подключался: ❌ (ни разу! переключите доступ выкл/вкл в настройках)\n")
+                }
+            }
             append("API-ключ сохранён: ${if (key) "✅" else "❌"}")
         }
     }

@@ -18,6 +18,7 @@ class WaNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         Logger.init(applicationContext)
+        Prefs.setNotifListenerConnected(applicationContext)
         Logger.i(TAG, "Слушатель уведомлений подключён")
     }
 
