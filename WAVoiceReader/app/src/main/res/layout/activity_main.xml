@@ -138,7 +138,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="24dp">
 
             <Button
                 android:id="@+id/btnCopyHistory"
@@ -149,56 +150,6 @@
 
             <Button
                 android:id="@+id/btnClearHistory"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Очистить" />
-        </LinearLayout>
-
-        <!-- Логи для диагностики -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:text="Логи (для отправки разработчику):"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/textLogs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="#11000000"
-            android:padding="12dp"
-            android:fontFamily="monospace"
-            android:textSize="11sp"
-            android:text="(лог пуст)" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="24dp">
-
-            <Button
-                android:id="@+id/btnCopyLogs"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Копировать логи" />
-
-            <Button
-                android:id="@+id/btnRefreshLogs"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Обновить" />
-
-            <Button
-                android:id="@+id/btnClearLogs"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"

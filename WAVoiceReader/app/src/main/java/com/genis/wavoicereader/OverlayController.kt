@@ -28,7 +28,6 @@ import android.widget.Toast
 class OverlayController(private val context: Context) {
 
     companion object {
-        private const val TAG = "OverlayController"
         const val DEFAULT_AUTO_HIDE_MS = 60_000L
     }
 
@@ -42,19 +41,12 @@ class OverlayController(private val context: Context) {
     fun hasPermission(): Boolean = Settings.canDrawOverlays(context)
 
     fun showMessage(title: String, text: String, autoHideMs: Long = DEFAULT_AUTO_HIDE_MS) {
-        if (!hasPermission()) {
-            Logger.e(TAG, "Нет разрешения на показ поверх экрана — карточка не показана")
-            return
-        }
+        if (!hasPermission()) return
         mainHandler.post {
             ensureContainer()
             val card = buildCard(title, text)
             container?.addView(card, 0)
-            Logger.i(TAG, "Показана карточка: \"$title\" (скрытие через ${autoHideMs / 1000}с)")
-            val hideRunnable = Runnable {
-                removeCard(card)
-                Logger.i(TAG, "Карточка авто-скрыта по таймеру")
-            }
+            val hideRunnable = Runnable { removeCard(card) }
             hideRunnables[card] = hideRunnable
             mainHandler.postDelayed(hideRunnable, autoHideMs)
         }
@@ -129,10 +121,7 @@ class OverlayController(private val context: Context) {
             val p = (8 * density).toInt()
             setPadding(p, 0, p, 0)
             isClickable = true
-            setOnClickListener {
-                removeCard(card)
-                Logger.i(TAG, "Карточка закрыта крестиком")
-            }
+            setOnClickListener { removeCard(card) }
         }
         header.addView(titleView)
         header.addView(closeBtn)
@@ -156,8 +145,7 @@ class OverlayController(private val context: Context) {
             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             cm.setPrimaryClip(ClipData.newPlainText("Голосовое", text))
             Toast.makeText(context, "Текст скопирован", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Logger.e(TAG, "Не удалось скопировать текст", e)
+        } catch (_: Exception) {
         }
     }
 

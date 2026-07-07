@@ -28,7 +28,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Logger.init(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -51,7 +50,6 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnStart.setOnClickListener {
             Prefs.setServiceEnabled(this, true)
-            Logger.i("MainActivity", "Пользователь нажал 'Запустить слежение'")
             val intent = Intent(this, VoiceWatcherService::class.java)
             ContextCompat.startForegroundService(this, intent)
             Toast.makeText(this, "Сервис запущен", Toast.LENGTH_SHORT).show()
@@ -59,7 +57,6 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnStop.setOnClickListener {
             Prefs.setServiceEnabled(this, false)
-            Logger.i("MainActivity", "Пользователь нажал 'Остановить'")
             stopService(Intent(this, VoiceWatcherService::class.java))
             Toast.makeText(this, "Сервис остановлен", Toast.LENGTH_SHORT).show()
         }
@@ -75,16 +72,6 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "История очищена", Toast.LENGTH_SHORT).show()
         }
 
-        binding.btnCopyLogs.setOnClickListener {
-            copyToClipboard("Логи WA Voice Reader", Logger.read())
-        }
-        binding.btnRefreshLogs.setOnClickListener { refreshLogs() }
-        binding.btnClearLogs.setOnClickListener {
-            Logger.clear()
-            refreshLogs()
-            Toast.makeText(this, "Логи очищены", Toast.LENGTH_SHORT).show()
-        }
-
         updateStatusText()
     }
 
@@ -96,10 +83,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshHistory() {
         binding.textHistory.text = HistoryStore.formatted(this)
-    }
-
-    private fun refreshLogs() {
-        binding.textLogs.text = Logger.read()
     }
 
     private fun onTestButtonClicked() {
@@ -169,7 +152,6 @@ class MainActivity : AppCompatActivity() {
         testRecorder = null
 
         val dir = testFile?.parentFile
-        Logger.i("MainActivity", "Тестовый файл записан: ${testFile?.absolutePath}")
         Toast.makeText(
             this,
             "Готово! Файл ${testFile?.name} создан в папке ${dir?.name}.\n" +
@@ -192,7 +174,6 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         updateStatusText()
         refreshHistory()
-        refreshLogs()
     }
 
     private fun requestAllFilesAccess() {

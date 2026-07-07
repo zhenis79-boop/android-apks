@@ -11,14 +11,7 @@ import android.service.notification.StatusBarNotification
 class WaNotificationListener : NotificationListenerService() {
 
     companion object {
-        private const val TAG = "NotifListener"
         private val WA_PACKAGES = setOf("com.whatsapp", "com.whatsapp.w4b")
-    }
-
-    override fun onListenerConnected() {
-        super.onListenerConnected()
-        Logger.init(applicationContext)
-        Logger.i(TAG, "Доступ к уведомлениям подключён")
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -40,8 +33,6 @@ class WaNotificationListener : NotificationListenerService() {
 
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
 
-        Logger.init(applicationContext)
         SenderTracker.record(title, text, System.currentTimeMillis())
-        Logger.i(TAG, "WhatsApp уведомление: \"$title\" — \"$text\"")
     }
 }

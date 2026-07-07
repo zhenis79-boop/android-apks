@@ -54,7 +54,6 @@ object WhisperClient {
 
             client.newCall(request).execute().use { response ->
                 val bodyStr = response.body?.string().orEmpty()
-                Logger.i("WhisperClient", "HTTP ${response.code}")
                 if (!response.isSuccessful) {
                     return Result.failure(IOException("HTTP ${response.code}: $bodyStr"))
                 }

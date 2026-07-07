@@ -18,7 +18,6 @@ import java.util.concurrent.Executors
 class VoiceWatcherService : Service() {
 
     companion object {
-        private const val TAG = "VoiceWatcher"
         private const val CHANNEL_ID = "wa_voice_watcher"
         private const val NOTIF_ID = 1
         private const val POLL_INTERVAL_MS = 3_000L
@@ -50,15 +49,10 @@ class VoiceWatcherService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Logger.init(this)
         overlay = OverlayController(this)
         createChannel()
         startForeground(NOTIF_ID, buildNotification("Ожидание новых голосовых сообщений…"))
         serviceStartTime = System.currentTimeMillis()
-        Logger.i(TAG, "Сервис запущен")
-        if (!overlay.hasPermission()) {
-            Logger.e(TAG, "ВНИМАНИЕ: нет разрешения 'поверх других приложений' — карточки не будут видны")
-        }
         setupWatcher()
     }
 
@@ -68,7 +62,6 @@ class VoiceWatcherService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Logger.i(TAG, "Сервис остановлен")
         fileObservers.forEach { it.stopWatching() }
         pollRunnable?.let { mainHandler.removeCallbacks(it) }
         executor.shutdownNow()
@@ -85,25 +78,14 @@ class VoiceWatcherService : Service() {
         rootDirs.clear()
         rootDirs.addAll((realDirs + testDir).distinctBy { it.absolutePath })
 
-        // Диагностика в лог: какие папки WhatsApp найдены.
-        if (realDirs.isEmpty()) {
-            Logger.e(TAG, "Папка голосовых WhatsApp НЕ найдена. Проверьте: 1) выдан ли доступ ко всем файлам; " +
-                "2) включена ли автозагрузка аудио в WhatsApp; 3) приходило ли хоть одно голосовое. " +
-                "Проверенные пути: ${CANDIDATE_DIRS.joinToString(" | ")}")
-        } else {
-            Logger.i(TAG, "Найдены папки WhatsApp: ${realDirs.joinToString(" | ") { it.absolutePath }}")
-        }
-
         // Рекурсивно вешаем наблюдатели на каждую папку и её подпапки.
-        var subCount = 0
         for (root in rootDirs) {
             root.walkTopDown().filter { it.isDirectory }.forEach { dir ->
-                if (attachObserver(dir)) subCount++
+                attachObserver(dir)
                 // помечаем уже существующие файлы как известные, чтобы не распознавать старьё
                 dir.listFiles()?.forEach { f -> if (f.isFile) knownFiles.add(f.absolutePath) }
             }
         }
-        Logger.i(TAG, "Слежу за ${watchedDirPaths.size} папками (включая $subCount подпапок). Известных файлов: ${knownFiles.size}")
 
         startPolling()
         updateNotification("Слежу за голосовыми (${watchedDirPaths.size} папок)")
@@ -139,9 +121,7 @@ class VoiceWatcherService : Service() {
         val child = File(dir, childPath)
         if (child.isDirectory) {
             // Появилась новая подпапка (например, новый месяц) — начинаем следить и за ней.
-            if (attachObserver(child)) {
-                Logger.i(TAG, "Замечена новая подпапка, слежу за ней: ${child.absolutePath}")
-            }
+            attachObserver(child)
             return
         }
         handleCandidate(child)
@@ -154,9 +134,7 @@ class VoiceWatcherService : Service() {
                 for (root in rootDirs) {
                     root.walkTopDown().forEach { f ->
                         if (f.isDirectory) {
-                            if (attachObserver(f)) {
-                                Logger.i(TAG, "Опрос: подключил новую подпапку ${f.absolutePath}")
-                            }
+                            attachObserver(f)
                         } else {
                             handleCandidate(f)
                         }
@@ -174,17 +152,15 @@ class VoiceWatcherService : Service() {
 
         val lname = file.name.lowercase()
         if (!lname.endsWith(".opus") && !lname.endsWith(".ogg")) {
-            knownFiles.add(file.absolutePath) // чтобы не логировать один и тот же файл повторно
+            knownFiles.add(file.absolutePath)
             return
         }
         if (file.lastModified() < serviceStartTime - 5_000) {
             knownFiles.add(file.absolutePath)
-            Logger.i(TAG, "Пропущен старый файл (создан до запуска сервиса): ${file.name}")
             return
         }
 
         knownFiles.add(file.absolutePath)
-        Logger.i(TAG, "Новый голосовой файл: ${file.absolutePath} (${file.length()} байт)")
         executor.execute { processFile(file) }
     }
 
@@ -200,10 +176,7 @@ class VoiceWatcherService : Service() {
             sizeAfter = file.length()
             tries++
         }
-        if (sizeAfter == 0L) {
-            Logger.e(TAG, "Файл пустой, пропускаю: ${file.name}")
-            return
-        }
+        if (sizeAfter == 0L) return
 
         // Определяем отправителя и отсеиваем ВАШИ исходящие голосовые.
         val isTest = file.absolutePath.startsWith(TEST_DIR)
@@ -212,19 +185,14 @@ class VoiceWatcherService : Service() {
             title = "Тест (эмуляция)"
         } else if (NotificationAccess.isEnabled(this)) {
             val rec = SenderTracker.matchIncomingVoice(file.lastModified())
-            if (rec == null) {
-                Logger.i(TAG, "Пропущено: нет входящего голосового уведомления WhatsApp — похоже на ваше исходящее (${file.name})")
-                return
-            }
+            if (rec == null) return // нет входящего голосового уведомления — это ваше исходящее
             title = "Голосовое от ${rec.title}"
         } else {
             title = "Голосовое сообщение"
-            Logger.i(TAG, "Доступ к уведомлениям выключен — не могу определить отправителя и отсеять исходящие. Включите его в приложении.")
         }
 
         val apiKey = Prefs.getApiKey(this)
         if (apiKey.isNullOrBlank()) {
-            Logger.e(TAG, "Не задан API-ключ OpenAI — распознавание невозможно")
             overlay.showMessage("WA Voice Reader", "Новое голосовое, но не задан API-ключ OpenAI в настройках приложения.")
             return
         }
@@ -234,23 +202,18 @@ class VoiceWatcherService : Service() {
         try {
             file.copyTo(tmp, overwrite = true)
         } catch (e: Exception) {
-            Logger.e(TAG, "Не удалось скопировать файл ${file.name}", e)
             return
         }
-
-        Logger.i(TAG, "Отправляю на распознавание [$title]: ${tmp.name} (${tmp.length()} байт)")
 
         val result = WhisperClient.transcribe(tmp, apiKey)
         tmp.delete()
 
         result.onSuccess { text ->
             val shown = if (text.isBlank()) "(пустая расшифровка)" else text
-            Logger.i(TAG, "Распознано [$title]: $shown")
             HistoryStore.add(this, "$title: $shown")
             overlay.showMessage(title, shown)
             updateNotification("Последнее сообщение распознано")
         }.onFailure { err ->
-            Logger.e(TAG, "Ошибка транскрибации", err)
             overlay.showMessage("Ошибка распознавания", err.message ?: "неизвестная ошибка")
         }
     }
