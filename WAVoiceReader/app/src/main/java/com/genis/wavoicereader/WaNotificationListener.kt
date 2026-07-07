@@ -18,16 +18,13 @@ class WaNotificationListener : NotificationListenerService() {
         val notif = sbn?.notification ?: return
         if (sbn.packageName !in WA_PACKAGES) return
 
-        // Служебные уведомления (резервное копирование, синхронизация, звонки) — не сообщения:
-        // они либо ongoing (несворачиваемые, с прогресс-баром), либо явно не CATEGORY_MESSAGE.
-        if (sbn.isOngoing) return
-        val category = notif.category
-        if (category != null && category != Notification.CATEGORY_MESSAGE) return
-
+        // Не фильтруем здесь по category/isOngoing/progress-флагам: разные версии WhatsApp
+        // ставят их непредсказуемо (в том числе на настоящие голосовые уведомления, у которых
+        // есть встроенный плеер с прогресс-баром воспроизведения), и такой фильтр однажды
+        // случайно отсеял вообще все голосовые уведомления. Мусорные системные уведомления
+        // (резервное копирование и т.п.) сами по себе отсеиваются ниже, в SenderTracker, по
+        // содержимому текста (voiceMarkers) — их текст никогда не совпадёт с "голосовым".
         val extras = notif.extras
-        // Прогресс-уведомления (например, "Отправка: X МБ из Y МБ") всегда несут EXTRA_PROGRESS_MAX.
-        if (extras.containsKey(Notification.EXTRA_PROGRESS_MAX)) return
-
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim() ?: return
         if (title.isEmpty() || title.equals("WhatsApp", ignoreCase = true)) return // сводка, не отправитель
 
