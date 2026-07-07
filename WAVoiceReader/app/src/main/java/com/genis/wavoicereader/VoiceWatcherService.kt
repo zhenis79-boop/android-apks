@@ -18,6 +18,7 @@ import java.util.concurrent.Executors
 class VoiceWatcherService : Service() {
 
     companion object {
+        private const val TAG = "VoiceWatcher"
         private const val CHANNEL_ID = "wa_voice_watcher"
         private const val NOTIF_ID = 1
         private const val POLL_INTERVAL_MS = 3_000L
@@ -49,6 +50,7 @@ class VoiceWatcherService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Logger.init(this)
         overlay = OverlayController(this)
         createChannel()
         startForeground(NOTIF_ID, buildNotification("Ожидание новых голосовых сообщений…"))
@@ -78,6 +80,12 @@ class VoiceWatcherService : Service() {
         rootDirs.clear()
         rootDirs.addAll((realDirs + testDir).distinctBy { it.absolutePath })
 
+        if (realDirs.isEmpty()) {
+            Logger.e(TAG, "Папки WhatsApp НЕ найдены. Проверенные пути: ${CANDIDATE_DIRS.joinToString(" | ")}")
+        } else {
+            Logger.i(TAG, "Найдены папки WhatsApp: ${realDirs.joinToString(" | ") { it.absolutePath }}")
+        }
+
         // Рекурсивно вешаем наблюдатели на каждую папку и её подпапки.
         for (root in rootDirs) {
             root.walkTopDown().filter { it.isDirectory }.forEach { dir ->
@@ -86,6 +94,7 @@ class VoiceWatcherService : Service() {
                 dir.listFiles()?.forEach { f -> if (f.isFile) knownFiles.add(f.absolutePath) }
             }
         }
+        Logger.i(TAG, "Слежу за ${watchedDirPaths.size} папками, известных файлов: ${knownFiles.size}")
 
         startPolling()
         updateNotification("Слежу за голосовыми (${watchedDirPaths.size} папок)")
@@ -161,6 +170,7 @@ class VoiceWatcherService : Service() {
         }
 
         knownFiles.add(file.absolutePath)
+        Logger.i(TAG, "Новый файл-кандидат: ${file.absolutePath} (${file.length()} байт)")
         executor.execute { processFile(file) }
     }
 
@@ -186,6 +196,7 @@ class VoiceWatcherService : Service() {
         if (isTest) {
             title = "Тест (эмуляция)"
         } else if (!NotificationAccess.isEnabled(this)) {
+            Logger.e(TAG, "Доступ к уведомлениям выключен — пропускаю файл ${file.name}")
             overlay.showMessage(
                 "WA Voice Reader",
                 "Голосовое не распознано: включите «Доступ к уведомлениям» в приложении, иначе нельзя отличить входящее от вашего исходящего."
@@ -193,8 +204,12 @@ class VoiceWatcherService : Service() {
             return
         } else {
             val rec = SenderTracker.matchIncomingVoice(file.lastModified())
-            if (rec == null) return // нет входящего голосового уведомления — это ваше исходящее
+            if (rec == null) {
+                Logger.i(TAG, "Нет совпадения с уведомлением для ${file.name} (время файла ${file.lastModified()}) — пропускаю")
+                return
+            }
             title = "Голосовое от ${rec.title}"
+            Logger.i(TAG, "Совпадение найдено: \"${rec.title}\"")
         }
 
         val apiKey = Prefs.getApiKey(this)
