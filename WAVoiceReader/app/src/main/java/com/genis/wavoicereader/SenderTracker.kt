@@ -10,7 +10,12 @@ package com.genis.wavoicereader
  */
 object SenderTracker {
 
-    private const val WINDOW_MS = 6 * 60_000L
+    // Уведомление и файл голосового появляются практически одновременно (обычно в пределах
+    // пары секунд). Узкое окно + одноразовое использование не даёт старому входящему
+    // уведомлению ложно "прицепиться" к более позднему файлу — например, к вашему
+    // собственному исходящему голосовому, отправленному через пару минут после входящего.
+    private const val MATCH_TOLERANCE_MS = 25_000L
+    private const val KEEP_MS = 2 * 60_000L
 
     data class Rec(val title: String, val text: String, val time: Long, val isVoice: Boolean)
 
@@ -30,15 +35,21 @@ object SenderTracker {
     fun record(title: String, text: String, time: Long) {
         val isVoice = voiceMarkers.any { text.contains(it, ignoreCase = true) }
         recs.add(Rec(title, text, time, isVoice))
-        val cutoff = time - WINDOW_MS * 2
+        val cutoff = time - KEEP_MS
         recs.removeAll { it.time < cutoff }
     }
 
-    /** Ищет входящее голосовое уведомление рядом по времени с появлением файла. */
+    /**
+     * Ищет входящее голосовое уведомление рядом по времени с появлением файла.
+     * Совпадение одноразовое — найденная запись удаляется, чтобы не сматчиться повторно
+     * с другим файлом.
+     */
     @Synchronized
     fun matchIncomingVoice(fileTime: Long): Rec? {
-        val lo = fileTime - WINDOW_MS
-        val hi = System.currentTimeMillis() + 2_000
-        return recs.filter { it.isVoice && it.time in lo..hi }.maxByOrNull { it.time }
+        val candidate = recs
+            .filter { it.isVoice && kotlin.math.abs(it.time - fileTime) <= MATCH_TOLERANCE_MS }
+            .minByOrNull { kotlin.math.abs(it.time - fileTime) }
+        if (candidate != null) recs.remove(candidate)
+        return candidate
     }
 }

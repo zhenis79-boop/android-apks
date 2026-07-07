@@ -179,16 +179,22 @@ class VoiceWatcherService : Service() {
         if (sizeAfter == 0L) return
 
         // Определяем отправителя и отсеиваем ВАШИ исходящие голосовые.
+        // Без активного доступа к уведомлениям отличить входящее от исходящего невозможно —
+        // в этом случае НЕ распознаём вообще (безопасный дефолт), а не молча обрабатываем всё подряд.
         val isTest = file.absolutePath.startsWith(TEST_DIR)
         val title: String
         if (isTest) {
             title = "Тест (эмуляция)"
-        } else if (NotificationAccess.isEnabled(this)) {
+        } else if (!NotificationAccess.isEnabled(this)) {
+            overlay.showMessage(
+                "WA Voice Reader",
+                "Голосовое не распознано: включите «Доступ к уведомлениям» в приложении, иначе нельзя отличить входящее от вашего исходящего."
+            )
+            return
+        } else {
             val rec = SenderTracker.matchIncomingVoice(file.lastModified())
             if (rec == null) return // нет входящего голосового уведомления — это ваше исходящее
             title = "Голосовое от ${rec.title}"
-        } else {
-            title = "Голосовое сообщение"
         }
 
         val apiKey = Prefs.getApiKey(this)
