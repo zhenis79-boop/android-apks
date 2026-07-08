@@ -27,9 +27,12 @@ class VoiceWatcherService : Service() {
         // Опрос — только подстраховка на случай пропуска системного события, поэтому редкий.
         private const val POLL_INTERVAL_MS = 20_000L
         private const val STABLE_CHECK_DELAY_MS = 900L
-        // Файл иногда обгоняет уведомление WhatsApp на пару секунд — даём время подождать.
-        private const val SENDER_MATCH_RETRY_MS = 700L
-        private const val SENDER_MATCH_MAX_WAIT_MS = 6_000L
+        // Файл иногда обгоняет уведомление WhatsApp на доли секунды — даём немного времени
+        // подождать. Раз мы теперь всё равно распознаём и без совпадения (см. processFile),
+        // долго ждать не нужно: если уведомления не будет вообще, не стоит тормозить весь
+        // ответ ради этого — лучше показать текст без имени быстрее.
+        private const val SENDER_MATCH_RETRY_MS = 500L
+        private const val SENDER_MATCH_MAX_WAIT_MS = 1_500L
 
         // Возможные пути к папке голосовых сообщений WhatsApp на разных версиях Android/WA.
         // Голосовые внутри раскладываются по подпапкам-месяцам (напр. .../WhatsApp Voice Notes/202607/) —
