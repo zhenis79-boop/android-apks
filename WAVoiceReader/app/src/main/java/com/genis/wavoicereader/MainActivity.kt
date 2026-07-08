@@ -22,6 +22,11 @@ import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        // Пока экран открыт — обновляем историю/логи сами, не дожидаясь возврата в приложение.
+        private const val AUTO_REFRESH_INTERVAL_MS = 4_000L
+    }
+
     private lateinit var binding: ActivityMainBinding
     private var testRecorder: MediaRecorder? = null
     private var testFile: File? = null
@@ -185,11 +190,24 @@ class MainActivity : AppCompatActivity() {
         return if (dir.exists() || dir.mkdirs()) dir else null
     }
 
+    private val autoRefreshHandler = Handler(Looper.getMainLooper())
+    private val autoRefreshRunnable = object : Runnable {
+        override fun run() {
+            updateStatusText()
+            refreshHistory()
+            refreshLogs()
+            autoRefreshHandler.postDelayed(this, AUTO_REFRESH_INTERVAL_MS)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        updateStatusText()
-        refreshHistory()
-        refreshLogs()
+        autoRefreshHandler.post(autoRefreshRunnable)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        autoRefreshHandler.removeCallbacks(autoRefreshRunnable)
     }
 
     private fun requestAllFilesAccess() {

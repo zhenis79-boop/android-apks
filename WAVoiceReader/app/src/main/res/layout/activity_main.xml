@@ -124,15 +124,20 @@
             android:text="История распознанных сообщений:"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/textHistory"
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="260dp"
             android:layout_marginTop="8dp"
-            android:background="#11000000"
-            android:padding="12dp"
-            android:textSize="13sp"
-            android:text="(история пуста)" />
+            android:background="#11000000">
+
+            <TextView
+                android:id="@+id/textHistory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:textSize="13sp"
+                android:text="(история пуста)" />
+        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -165,16 +170,21 @@
             android:text="Логи (временно, для диагностики):"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/textLogs"
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="260dp"
             android:layout_marginTop="8dp"
-            android:background="#11000000"
-            android:padding="12dp"
-            android:fontFamily="monospace"
-            android:textSize="11sp"
-            android:text="(лог пуст)" />
+            android:background="#11000000">
+
+            <TextView
+                android:id="@+id/textLogs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:fontFamily="monospace"
+                android:textSize="11sp"
+                android:text="(лог пуст)" />
+        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
