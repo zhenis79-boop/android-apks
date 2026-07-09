@@ -48,8 +48,10 @@ class VoiceWatcherService : Service() {
         val TEST_DIR = "/storage/emulated/0/WAVoiceReaderTest/VoiceNotes"
     }
 
-    // Файлы обрабатываются по одному — параллелизм тут не нужен, а один поток экономит память.
-    private val executor = Executors.newSingleThreadExecutor()
+    // Небольшой фиксированный пул: голосовые нередко приходят по 2-3 подряд, а с одним потоком
+    // они выстраивались в очередь и ждали ПОЛНОЙ обработки (включая сетевой запрос) предыдущего
+    // файла — задержка на ровном месте. 2 потока почти не добавляют памяти, но убирают эту очередь.
+    private val executor = Executors.newFixedThreadPool(2)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val fileObservers = mutableListOf<FileObserver>()
     private val watchedDirPaths = mutableSetOf<String>()
