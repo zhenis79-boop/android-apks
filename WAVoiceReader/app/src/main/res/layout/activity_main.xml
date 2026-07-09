@@ -124,7 +124,7 @@
             android:text="История распознанных сообщений:"
             android:textStyle="bold" />
 
-        <ScrollView
+        <com.genis.wavoicereader.InnerScrollView
             android:layout_width="match_parent"
             android:layout_height="260dp"
             android:layout_marginTop="8dp"
@@ -137,7 +137,7 @@
                 android:padding="12dp"
                 android:textSize="13sp"
                 android:text="(история пуста)" />
-        </ScrollView>
+        </com.genis.wavoicereader.InnerScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -170,7 +170,7 @@
             android:text="Логи (временно, для диагностики):"
             android:textStyle="bold" />
 
-        <ScrollView
+        <com.genis.wavoicereader.InnerScrollView
             android:layout_width="match_parent"
             android:layout_height="260dp"
             android:layout_marginTop="8dp"
@@ -184,7 +184,7 @@
                 android:fontFamily="monospace"
                 android:textSize="11sp"
                 android:text="(лог пуст)" />
-        </ScrollView>
+        </com.genis.wavoicereader.InnerScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
