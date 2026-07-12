@@ -131,9 +131,11 @@ class MainActivity : AppCompatActivity() {
         val now = System.currentTimeMillis()
         binding.textPipeline.text = buildString {
             append("Файлов поймано:      ${s.candidatesCaught}  (${PipelineStats.agoLabel(s.lastCandidateAt, now)})\n")
-            append("WA-уведомлений:      ${s.waNotifications}  (${PipelineStats.agoLabel(s.lastNotificationAt, now)})\n")
+            append("Задержка ловли:      ${PipelineStats.lagLabel(s.lastCatchLagMs)}\n")
+            append("WA-уведомлений:      ${s.waNotifications}  (голосовых:${s.waVoiceNotifications} прочих:${s.waOtherNotifications})  (${PipelineStats.agoLabel(s.lastNotificationAt, now)})\n")
             append("Match отправителя:   ✅${s.senderMatched}  без имени:${s.senderUnmatched}  (${PipelineStats.agoLabel(s.lastSenderDecisionAt, now)})\n")
-            append("Распознаваний:       ✅${s.transcribeOk}  ❌${s.transcribeError}  (${PipelineStats.agoLabel(s.lastTranscribeAt, now)})")
+            append("Распознаваний:       ✅${s.transcribeOk}  ❌${s.transcribeError}  (${PipelineStats.agoLabel(s.lastTranscribeAt, now)})\n")
+            append("Время обработки:     ${PipelineStats.lagLabel(s.lastProcessLagMs)}")
         }
     }
 

@@ -209,11 +209,12 @@ class VoiceWatcherService : Service() {
 
         knownFiles.add(file.absolutePath)
         Logger.i(TAG, "Новый файл-кандидат: ${file.absolutePath} (${file.length()} байт)")
-        PipelineStats.onCandidateCaught()
+        PipelineStats.onCandidateCaught(file.lastModified())
         executor.execute { processFile(file) }
     }
 
     private fun processFile(file: File) {
+        val processStarted = System.currentTimeMillis()
         // ждём, пока WhatsApp закончит запись файла (размер должен стабилизироваться)
         var sizeBefore = file.length()
         Thread.sleep(STABLE_CHECK_DELAY_MS)
@@ -290,10 +291,10 @@ class VoiceWatcherService : Service() {
             HistoryStore.add(this, "$title: $shown")
             overlay.showMessage(title, shown)
             updateNotification("Последнее сообщение распознано")
-            PipelineStats.onTranscribeOk()
+            PipelineStats.onTranscribeOk(System.currentTimeMillis() - processStarted)
         }.onFailure { err ->
             overlay.showMessage("Ошибка распознавания", err.message ?: "неизвестная ошибка")
-            PipelineStats.onTranscribeError()
+            PipelineStats.onTranscribeError(System.currentTimeMillis() - processStarted)
         }
     }
 
