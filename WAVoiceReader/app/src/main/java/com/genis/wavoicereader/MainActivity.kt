@@ -57,11 +57,15 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnStart.setOnClickListener {
             Prefs.setServiceEnabled(this, true)
+            // Сбрасываем счётчики цепочки, чтобы статистика отражала именно эту сессию
+            // слежения, а не «с момента запуска приложения».
+            PipelineStats.reset()
             val intent = Intent(this, VoiceWatcherService::class.java)
             ContextCompat.startForegroundService(this, intent)
             Logger.i("MainActivity", "Слежение включено пользователем")
             Toast.makeText(this, "Сервис запущен", Toast.LENGTH_SHORT).show()
             updateStatusText()
+            refreshPipeline()
         }
 
         binding.btnStop.setOnClickListener {
@@ -70,6 +74,12 @@ class MainActivity : AppCompatActivity() {
             Logger.i("MainActivity", "Слежение остановлено пользователем")
             Toast.makeText(this, "Сервис остановлен", Toast.LENGTH_SHORT).show()
             updateStatusText()
+        }
+
+        binding.btnResetStats.setOnClickListener {
+            PipelineStats.reset()
+            refreshPipeline()
+            Toast.makeText(this, "Статистика сброшена", Toast.LENGTH_SHORT).show()
         }
 
         binding.btnTestRecord.setOnClickListener { onTestButtonClicked() }
@@ -94,6 +104,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         updateStatusText()
+        refreshPipeline()
     }
 
     private fun copyToClipboard(label: String, text: String) {
@@ -108,6 +119,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshLogs() {
         binding.textLogs.text = Logger.read()
+    }
+
+    /**
+     * Обновляет живую сводку цепочки обработки. Читается в авто-обновлении (каждые
+     * AUTO_REFRESH_INTERVAL_MS), чтобы числа и «Nс назад» шли вживую без ручного
+     * обновления. Помогает быстро понять, на каком этапе что-то застряло.
+     */
+    private fun refreshPipeline() {
+        val s = PipelineStats.snapshot()
+        val now = System.currentTimeMillis()
+        binding.textPipeline.text = buildString {
+            append("Файлов поймано:      ${s.candidatesCaught}  (${PipelineStats.agoLabel(s.lastCandidateAt, now)})\n")
+            append("WA-уведомлений:      ${s.waNotifications}  (${PipelineStats.agoLabel(s.lastNotificationAt, now)})\n")
+            append("Match отправителя:   ✅${s.senderMatched}  без имени:${s.senderUnmatched}  (${PipelineStats.agoLabel(s.lastSenderDecisionAt, now)})\n")
+            append("Распознаваний:       ✅${s.transcribeOk}  ❌${s.transcribeError}  (${PipelineStats.agoLabel(s.lastTranscribeAt, now)})")
+        }
     }
 
     private fun onTestButtonClicked() {
@@ -199,6 +226,7 @@ class MainActivity : AppCompatActivity() {
     private val autoRefreshRunnable = object : Runnable {
         override fun run() {
             updateStatusText()
+            refreshPipeline()
             refreshHistory()
             refreshLogs()
             autoRefreshHandler.postDelayed(this, AUTO_REFRESH_INTERVAL_MS)

@@ -30,8 +30,36 @@
             android:layout_height="wrap_content"
             android:background="#11000000"
             android:padding="12dp"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="12dp"
             android:text="Статус загружается…" />
+
+        <!-- Живая сводка цепочки обработки: показывает, что реально происходит
+             прямо сейчас, без вычитки сырого лога. Числа и «Nс назад» обновляются
+             в авто-обновлении MainActivity вместе со статусом/логами. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Что происходит (живая диагностика):"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/textPipeline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#11000000"
+            android:padding="12dp"
+            android:layout_marginBottom="8dp"
+            android:fontFamily="monospace"
+            android:textSize="12sp"
+            android:text="(статистика пуста)" />
+
+        <Button
+            android:id="@+id/btnResetStats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:text="Сбросить статистику цепочки" />
 
         <Button
             android:id="@+id/btnAllFilesAccess"

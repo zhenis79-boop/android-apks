@@ -209,6 +209,7 @@ class VoiceWatcherService : Service() {
 
         knownFiles.add(file.absolutePath)
         Logger.i(TAG, "Новый файл-кандидат: ${file.absolutePath} (${file.length()} байт)")
+        PipelineStats.onCandidateCaught()
         executor.execute { processFile(file) }
     }
 
@@ -258,10 +259,12 @@ class VoiceWatcherService : Service() {
                 // в этом случае лучше распознать без имени отправителя, чем молча пропустить
                 // настоящее входящее сообщение. Риск изредка увидеть своё исходящее — меньшее зло.
                 Logger.i(TAG, "Нет совпадения с уведомлением для ${file.name} — распознаю без имени отправителя")
+                PipelineStats.onSenderUnmatched()
                 title = "Голосовое сообщение"
             } else {
                 title = "Голосовое от ${rec.title}"
                 Logger.i(TAG, "Совпадение найдено: \"${rec.title}\"")
+                PipelineStats.onSenderMatched()
             }
         }
 
@@ -287,8 +290,10 @@ class VoiceWatcherService : Service() {
             HistoryStore.add(this, "$title: $shown")
             overlay.showMessage(title, shown)
             updateNotification("Последнее сообщение распознано")
+            PipelineStats.onTranscribeOk()
         }.onFailure { err ->
             overlay.showMessage("Ошибка распознавания", err.message ?: "неизвестная ошибка")
+            PipelineStats.onTranscribeError()
         }
     }
 

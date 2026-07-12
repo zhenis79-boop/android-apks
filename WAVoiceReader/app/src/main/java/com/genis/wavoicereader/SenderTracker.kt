@@ -36,6 +36,7 @@ object SenderTracker {
         val isVoice = voiceMarkers.any { text.contains(it, ignoreCase = true) }
         recs.add(Rec(title, text, time, isVoice))
         Logger.i("SenderTracker", "record: \"$title\" isVoice=$isVoice")
+        PipelineStats.onWaNotification()
         val cutoff = time - KEEP_MS
         recs.removeAll { it.time < cutoff }
     }
