@@ -108,8 +108,11 @@ class OverlayController(private val context: Context) {
         }
         val titleView = TextView(context).apply {
             setText(title)
-            setTextColor(Color.parseColor("#25D366")) // цвет WhatsApp
-            textSize = 13f
+            // Оранжевый + жирный: имя отправителя сразу выделяется на фоне белого текста
+            // расшифровки, чтобы с одного взгляда видеть «кто» и «что сказал».
+            setTextColor(Color.parseColor("#FF9800"))
+            textSize = 15f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
             )

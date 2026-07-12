@@ -84,6 +84,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnTestRecord.setOnClickListener { onTestButtonClicked() }
 
+        // Клик по красному баннеру предупреждения ведёт прямо в нужные системные настройки:
+        // если это зомби-listener — на экран доступа к уведомлениям (там переключить тумблер).
+        binding.textWarning.setOnClickListener { openWarningTarget() }
+
         binding.btnCopyHistory.setOnClickListener {
             copyToClipboard("История WA Voice Reader", HistoryStore.formatted(this))
         }
@@ -104,6 +108,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         updateStatusText()
+        updateWarning()
         refreshPipeline()
     }
 
@@ -228,6 +233,7 @@ class MainActivity : AppCompatActivity() {
     private val autoRefreshRunnable = object : Runnable {
         override fun run() {
             updateStatusText()
+            updateWarning()
             refreshPipeline()
             refreshHistory()
             refreshLogs()
@@ -303,6 +309,43 @@ class MainActivity : AppCompatActivity() {
             startTestRecording()
         } else if (requestCode == 200) {
             Toast.makeText(this, "Без разрешения на микрофон тест недоступен", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Показывает громкое красное предупреждение в самом верху, ТОЛЬКО когда найдено
+     * конкретное опасное состояние. Сейчас это «зомби-listener»: системный тумблер
+     * «Доступ к уведомлениям» включён, но слушатель ни разу реально не подключился и
+     * колбэков не получает — имя отправителя определяться не будет. Это самая частая
+     * причина «всё работает, но имени нет», и она повторяется после перезагрузки/обновления APK.
+     *
+     * Баннер показываем только когда слежение включено: если пользователь ещё не
+     * запустил сервис — предупреждать о listener рано.
+     */
+    private fun updateWarning() {
+        val notifAccess = NotificationAccess.isEnabled(this)
+        val connectedAt = Prefs.getNotifListenerConnectedAt(this)
+        val serviceEnabled = Prefs.isServiceEnabled(this)
+
+        val zombieListener = notifAccess && connectedAt <= 0L && serviceEnabled
+
+        if (!zombieListener) {
+            binding.textWarning.visibility = android.view.View.GONE
+            return
+        }
+
+        binding.textWarning.visibility = android.view.View.VISIBLE
+        binding.textWarning.text =
+            "⚠️ Имена отправителей не определяются: доступ к уведомлениям завис.\n" +
+            "Нажмите здесь, откройте «WA Voice Reader», выключите тумблер и сразу включите обратно."
+    }
+
+    /** Куда вести пользователя по клику на баннер — сейчас всегда на доступ к уведомлениям. */
+    private fun openWarningTarget() {
+        try {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        } catch (_: Exception) {
+            Toast.makeText(this, "Не удалось открыть настройки", Toast.LENGTH_SHORT).show()
         }
     }
 
