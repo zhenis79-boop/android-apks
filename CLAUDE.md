@@ -34,6 +34,8 @@ gh release list
   Версия проставляется автоматически: `v1.0.<github.run_number>`, имя ассета
   `WAVoiceReader-v1.0.<run_number>.apk` (уникальное имя — иначе Obtainium падает
   с `PathAccessException` при перезаписи одноимённого файла в Download).
+  Workflow явно ставит Gradle 8.7 через `gradle/actions/setup-gradle`, потому что
+  полноценного `gradlew` wrapper-скрипта в репозитории сейчас нет.
 
 ## Секреты CI (в настройках репозитория)
 

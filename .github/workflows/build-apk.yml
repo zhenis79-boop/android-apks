@@ -24,6 +24,11 @@ jobs:
       - name: Установить Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Установить Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
       - name: Восстановить release keystore
         run: |
           mkdir -p "$RUNNER_TEMP/keystore"
