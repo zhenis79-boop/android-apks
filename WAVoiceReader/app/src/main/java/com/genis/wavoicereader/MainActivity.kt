@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Введите API-ключ", Toast.LENGTH_SHORT).show()
             } else {
                 Prefs.setApiKey(this, key)
+                Logger.i("MainActivity", "API-ключ сохранён (${key.length} символов)")
                 Toast.makeText(this, "Ключ сохранён", Toast.LENGTH_SHORT).show()
             }
         }
@@ -58,13 +59,17 @@ class MainActivity : AppCompatActivity() {
             Prefs.setServiceEnabled(this, true)
             val intent = Intent(this, VoiceWatcherService::class.java)
             ContextCompat.startForegroundService(this, intent)
+            Logger.i("MainActivity", "Слежение включено пользователем")
             Toast.makeText(this, "Сервис запущен", Toast.LENGTH_SHORT).show()
+            updateStatusText()
         }
 
         binding.btnStop.setOnClickListener {
             Prefs.setServiceEnabled(this, false)
             stopService(Intent(this, VoiceWatcherService::class.java))
+            Logger.i("MainActivity", "Слежение остановлено пользователем")
             Toast.makeText(this, "Сервис остановлен", Toast.LENGTH_SHORT).show()
+            updateStatusText()
         }
 
         binding.btnTestRecord.setOnClickListener { onTestButtonClicked() }
@@ -278,6 +283,13 @@ class MainActivity : AppCompatActivity() {
         val notifAccess = NotificationAccess.isEnabled(this)
         val key = !Prefs.getApiKey(this).isNullOrBlank()
         val connectedAt = Prefs.getNotifListenerConnectedAt(this)
+        val serviceEnabled = Prefs.isServiceEnabled(this)
+        val realDirs = VoiceWatcherService.CANDIDATE_DIRS.map { File(it) }
+            .filter { it.exists() && it.isDirectory }
+        val testDir = File(VoiceWatcherService.TEST_DIR)
+        val historyCount = HistoryStore.all(this).size
+        val logLines = Logger.read().lineSequence()
+            .count { it.isNotBlank() && !it.startsWith("(") }
 
         binding.textStatus.text = buildString {
             append("Доступ ко всем файлам: ${if (allFiles) "✅" else "❌"}\n")
@@ -291,7 +303,17 @@ class MainActivity : AppCompatActivity() {
                     append("Слушатель уведомлений реально подключался: ❌ (ни разу! переключите доступ выкл/вкл в настройках)\n")
                 }
             }
-            append("API-ключ сохранён: ${if (key) "✅" else "❌"}")
+            append("API-ключ сохранён: ${if (key) "✅" else "❌"}\n")
+            append("Слежение включено в настройках: ${if (serviceEnabled) "✅" else "❌"}\n")
+            append("Папки WhatsApp найдены: ${if (realDirs.isNotEmpty()) "✅ (${realDirs.size})" else "❌"}\n")
+            if (realDirs.isNotEmpty()) {
+                realDirs.forEach { dir -> append("• ${dir.absolutePath}\n") }
+            } else {
+                append("• проверено путей: ${VoiceWatcherService.CANDIDATE_DIRS.size}\n")
+            }
+            append("Тестовая папка: ${if (testDir.exists() && testDir.isDirectory) "✅" else "❌"} ${testDir.absolutePath}\n")
+            append("История: $historyCount записей\n")
+            append("Логи: $logLines строк")
         }
     }
 }
