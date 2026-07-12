@@ -1,5 +1,37 @@
 # android-apks — контекст инфраструктуры
 
+## Текущее состояние handoff
+
+Последний подтверждённый инфраструктурный релиз: `v1.0.26`.
+
+Что уже сделано:
+
+- `WAVoiceReader/README.md` обновлён под текущий процесс: GitHub Actions
+  собирает подписанный release APK, GitHub Releases публикует asset, Obtainium
+  забирает обновление с Releases.
+- `.github/workflows/build-apk.yml` собирает `assembleRelease`, проставляет
+  `versionCode = github.run_number`, `versionName = 1.0.<github.run_number>`,
+  создаёт tag/release `v1.0.<github.run_number>` и asset
+  `WAVoiceReader-v1.0.<github.run_number>.apk`.
+- Workflow явно ставит Gradle 8.7 через `gradle/actions/setup-gradle`, потому что
+  в репозитории есть `gradle/wrapper/gradle-wrapper.properties`, но нет полного
+  `gradlew`/`gradlew.bat` wrapper-скрипта.
+- Repomix настроен через `.repomixignore`, `.gitignore` и `repomix.config.json`.
+  Локальная проверка Repomix после настройки: 21 файл, около 17k токенов,
+  security check без подозрительных файлов.
+
+Важно для будущих агентов:
+
+- Не коммитить `repomix-output.xml`, `.npm-cache/`, APK, keystore, build outputs
+  и логи. Это уже зафиксировано в `.gitignore`/`.repomixignore`.
+- Если `npx.cmd repomix@latest` падает из-за доступа к npm cache на Windows,
+  можно временно использовать локальный cache:
+  `$env:npm_config_cache="$PWD\.npm-cache"; npx.cmd repomix@latest`.
+- После любого push в `main` GitHub Actions выпустит новый APK. Даже
+  документационные изменения создают новый release для Obtainium.
+- Не пытаться собирать Android-проект локально в этой среде: проверка сборки
+  идёт через GitHub Actions.
+
 ## ⚠️ ГЛАВНОЕ ПРАВИЛО: локальная сборка НЕВОЗМОЖНА
 
 На этом сервере **НЕТ и НЕ ДОЛЖНО БЫТЬ** Android SDK / gradle. Сервер не потянет
