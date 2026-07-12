@@ -1,0 +1,13 @@
+repomix-output.*
+digest.txt
+.npm-cache/
+
+WAVoiceReader/.gradle/
+WAVoiceReader/build/
+WAVoiceReader/app/build/
+
+*.apk
+*.aab
+*.keystore
+*.jks
+*.log

@@ -1,0 +1,24 @@
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "compress": true,
+    "removeComments": false,
+    "showLineNumbers": true
+  },
+  "include": [
+    "CLAUDE.md",
+    "WAVoiceReader/README.md",
+    "WAVoiceReader/**/*.kt",
+    "WAVoiceReader/**/*.kts",
+    "WAVoiceReader/**/*.xml",
+    ".github/workflows/*.yml"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

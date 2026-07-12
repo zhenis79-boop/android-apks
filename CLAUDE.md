@@ -26,6 +26,19 @@ gh run view <run-id> --log-failed   # если упало
 gh release list
 ```
 
+## Компактный контекст для AI
+
+Чтобы не тратить лишние токены, перед большими задачами можно обновить
+Repomix-контекст:
+
+```
+npx.cmd repomix@latest
+```
+
+Конфиг лежит в `repomix.config.json`. Он включает Kotlin/XML/Gradle/workflow
+файлы и исключает build outputs, APK, keystore, логи и сам `repomix-output.xml`.
+Файл `repomix-output.xml` — временный локальный артефакт, его не коммитить.
+
 ## Структура
 
 - `WAVoiceReader/` — Android-приложение (Kotlin). Расшифровывает голосовые
